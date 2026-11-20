@@ -462,7 +462,7 @@
       <span style="color: var(--text-muted); font-size: 13px;">to</span>
       <input type="date" id="endDate" />
       <div class="preset-group">
-        <button class="chip active" data-preset="schoolYear">Aug 1 – Present</button>
+        <button class="chip active" data-preset="schoolYear">Current School Year</button>
         <button class="chip" data-preset="last7">Last 7 Days</button>
         <button class="chip" data-preset="last30">Last 30 Days</button>
         <button class="chip" data-preset="thisMonth">This Month</button>
@@ -589,7 +589,7 @@
       <div class="card-header">
         <div>
           <h2 class="card-title">Elapsed Response Time (Request Timestamp &rarr; Response Timestamp)</h2>
-          <p class="card-subtitle">Analyze response times overall or broken down by Responder, Teacher/Class, Grade, or Student. Hours between 5:30 PM and 7:30 AM are excluded.</p>
+          <p class="card-subtitle">Analyze response times overall or broken down by Responder, Teacher/Class, Grade, or Student.</p>
         </div>
       </div>
 
@@ -619,7 +619,7 @@
         <div class="card-header">
           <div>
             <h3 class="card-title" id="elapsedChartTitle">Average vs. Median Elapsed Time (Minutes)</h3>
-            <p class="card-subtitle">Calculated from resolved records with valid timestamps (excluding 5:30 PM – 7:30 AM)</p>
+            <p class="card-subtitle">Calculated from resolved records with valid request and response timestamps</p>
           </div>
         </div>
         <div class="chart-wrap">
@@ -1026,43 +1026,6 @@
     };
   }
 
-  /**
-   * Calculates elapsed minutes between reqDate and resDate while excluding
-   * overnight hours between 5:30 PM (17:30) and 7:30 AM (07:30).
-   */
-  function calculateElapsedMinutes(reqDate, resDate) {
-    if (!reqDate || !resDate) return null;
-    const startMs = reqDate.getTime();
-    const endMs = resDate.getTime();
-    if (endMs < startMs) return null;
-    if (endMs === startMs) return 0;
-
-    let totalMs = 0;
-    let cursor = new Date(reqDate.getFullYear(), reqDate.getMonth(), reqDate.getDate(), 0, 0, 0, 0);
-    const endDay = new Date(resDate.getFullYear(), resDate.getMonth(), resDate.getDate(), 0, 0, 0, 0);
-
-    while (cursor <= endDay) {
-      const y = cursor.getFullYear();
-      const m = cursor.getMonth();
-      const d = cursor.getDate();
-
-      // Active daily window: 7:30 AM (07:30) to 5:30 PM (17:30)
-      const windowStartMs = new Date(y, m, d, 7, 30, 0, 0).getTime();
-      const windowEndMs = new Date(y, m, d, 17, 30, 0, 0).getTime();
-
-      const overlapStart = Math.max(startMs, windowStartMs);
-      const overlapEnd = Math.min(endMs, windowEndMs);
-
-      if (overlapEnd > overlapStart) {
-        totalMs += overlapEnd - overlapStart;
-      }
-
-      cursor = new Date(y, m, d + 1, 0, 0, 0, 0);
-    }
-
-    return Math.round((totalMs / (1000 * 60)) * 10) / 10;
-  }
-
   function normalizeRecords(records) {
     return records.map((r, idx) => {
       const firstName = String(r.firstName || '').trim();
@@ -1075,7 +1038,12 @@
       const notes = String(r.notes || '').trim();
       const reqDate = parseTimestamp(r.timestamp);
       const resDate = parseTimestamp(r.responseTimestamp);
-      const elapsedMinutes = calculateElapsedMinutes(reqDate, resDate);
+
+      let elapsedMinutes = null;
+      if (reqDate && resDate) {
+        const diff = (resDate.getTime() - reqDate.getTime()) / (1000 * 60);
+        if (diff >= 0) elapsedMinutes = Math.round(diff * 10) / 10;
+      }
 
       return {
         id: idx,
@@ -1343,7 +1311,7 @@
       <div class="kpi-card">
         <div class="kpi-label">Avg Elapsed Time</div>
         <div class="kpi-value" style="font-size:21px;">${formatMinutes(stats.avg)}</div>
-        <div class="kpi-sub">Excl. 5:30 PM–7:30 AM (${stats.count} timed)</div>
+        <div class="kpi-sub">Request to response (${stats.count} timed)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Median Elapsed Time</div>
@@ -1482,7 +1450,7 @@
       <div class="kpi-card">
         <div class="kpi-label">Average Elapsed Time</div>
         <div class="kpi-value" style="font-size:21px;">${formatMinutes(overallStats.avg)}</div>
-        <div class="kpi-sub">Excludes 5:30 PM – 7:30 AM</div>
+        <div class="kpi-sub">Mean request to response</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Median Elapsed Time</div>

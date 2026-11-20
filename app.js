@@ -3,6 +3,16 @@
 // =========================================================================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJi5fstpdPXgRx45hU2MGV7OoZ-SAqdWKpVS4rp6V4_dkVRvH6ua8bC9tSM3ZH3PTY/exec';
 
+// Default time blocks for "By Portion of Day"
+const DEFAULT_CUSTOM_BLOCKS = [
+  { label: 'Before School (7:30–9:00)', start: '07:30', end: '09:00' },
+  { label: 'Early Morning (9:00–10:30)', start: '09:00', end: '10:30' },
+  { label: 'Late Morning (10:30–12:00)', start: '10:30', end: '12:00' },
+  { label: 'Early Afternoon (12:00–1:30)', start: '12:00', end: '13:30' },
+  { label: 'Late Afternoon (1:30–3:00)', start: '13:30', end: '15:00' },
+  { label: 'After School (3:00–5:30)', start: '15:00', end: '17:30' }
+];
+
 // Fallback preview dataset (used only if network fetch fails)
 const FALLBACK_RECORDS = [
   { firstName: 'Akeem', lastName: 'Morris', className: 'Nunn', grade: '4', timestamp: '2026-11-19 11:15:55', location: "Nunn's Classroom", responder: 'Malanson', responseTimestamp: '2026-11-19 11:48:02', notes: '' },
@@ -53,13 +63,7 @@ const state = {
   intervalMinutes: 60,
   customMinutes: 45,
   hideEmptySlices: true,
-  customBlocks: [
-    { label: 'Early Morning (Before 9:00)', start: '00:00', end: '09:00' },
-    { label: 'Mid-Morning (9:00–11:00)', start: '09:00', end: '11:00' },
-    { label: 'Midday / Lunch (11:00–13:00)', start: '11:00', end: '13:00' },
-    { label: 'Afternoon (13:00–15:30)', start: '13:00', end: '15:30' },
-    { label: 'After School (15:30+)', start: '15:30', end: '24:00' }
-  ],
+  customBlocks: DEFAULT_CUSTOM_BLOCKS.map(b => ({ ...b })),
   rawSortCol: 'timestamp',
   rawSortDir: 'desc',
   rawSearch: ''
@@ -1209,15 +1213,10 @@ function init() {
     renderPie();
   });
   document.getElementById('resetCustomBlocksBtn').addEventListener('click', () => {
-    state.customBlocks = [
-      { label: 'Early Morning (Before 9:00)', start: '00:00', end: '09:00' },
-      { label: 'Mid-Morning (9:00–11:00)', start: '09:00', end: '11:00' },
-      { label: 'Midday / Lunch (11:00–13:00)', start: '11:00', end: '13:00' },
-      { label: 'Afternoon (13:00–15:30)', start: '13:00', end: '15:30' },
-      { label: 'After School (15:30+)', start: '15:30', end: '24:00' }
-    ];
+    state.customBlocks = DEFAULT_CUSTOM_BLOCKS.map(b => ({ ...b }));
     renderCustomBlocksUI();
     renderPie();
+    if (state.overviewTimeBucket === 'custom') renderOverview();
   });
   renderCustomBlocksUI();
 

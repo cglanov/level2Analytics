@@ -74,16 +74,6 @@
       font-size: 18px;
       font-weight: 700;
     }
-    .brand p {
-      margin: 0;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    .brand a {
-      color: var(--primary);
-      text-decoration: none;
-    }
-    .brand a:hover { text-decoration: underline; }
 
     .connection-bar {
       display: flex;
@@ -396,12 +386,31 @@
     .badge-resolved { background: var(--success-soft); color: var(--success); }
     .badge-grade { background: var(--primary-soft); color: var(--primary); }
 
+    /* Truncated expandable notes */
     .notes-cell {
-      max-width: 360px;
-      white-space: pre-wrap;
-      word-break: break-word;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       color: #334155;
       font-size: 12px;
+    }
+    .notes-cell.is-truncated {
+      cursor: pointer;
+    }
+    .notes-cell.is-truncated:hover {
+      color: var(--primary);
+      text-decoration: underline;
+    }
+    .notes-cell.expanded {
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow: visible;
+      max-width: 420px;
+      background: #f1f5f9;
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--text);
     }
 
     .toast {
@@ -431,9 +440,6 @@
       <div class="brand-badge">L2</div>
       <div>
         <h1>Level 2 Incident &amp; Response Analytics</h1>
-        <p>
-          Connected to <a href="https://docs.google.com/spreadsheets/d/1wcAuezhbeXfI0I32awGqka-SqdHKXhfgRJjaU66NkD4/edit?gid=773663669#gid=773663669" target="_blank" rel="noopener">Level 2 Google Sheet (record &amp; responders)</a>
-        </p>
       </div>
     </div>
 
@@ -442,9 +448,7 @@
         <span class="status-dot"></span>
         <span id="connectionLabel">Connecting...</span>
       </span>
-      <input type="text" id="scriptUrlInput" placeholder="Google Apps Script Web App URL..." style="width: 290px;" />
-      <button class="primary" id="saveUrlBtn">Connect &amp; Load</button>
-      <button id="refreshBtn" title="Reload latest data from Google Sheet">Refresh</button>
+      <button id="refreshBtn" title="Reload latest data">Refresh</button>
     </div>
   </div>
 </header>
@@ -494,10 +498,10 @@
           <label for="scopeType">Filter By:</label>
           <select id="scopeType">
             <option value="all">Full Dataset (All Records in Timespan)</option>
-            <option value="student">Specific Student (Col A &amp; B)</option>
-            <option value="class">Specific Class / Teacher (Col C)</option>
-            <option value="grade">Specific Grade (Col D)</option>
-            <option value="location">Specific Location (Col F)</option>
+            <option value="student">Specific Student</option>
+            <option value="class">Specific Class / Teacher</option>
+            <option value="grade">Specific Grade</option>
+            <option value="location">Specific Location</option>
           </select>
         </div>
 
@@ -509,6 +513,9 @@
         <div class="filter-group" style="margin-left: auto;">
           <label for="overviewTimeBucket">Time-of-Day Granularity:</label>
           <select id="overviewTimeBucket">
+            <option value="5">5-Minute Intervals</option>
+            <option value="10">10-Minute Intervals</option>
+            <option value="15">15-Minute Intervals</option>
             <option value="30">30-Minute Intervals</option>
             <option value="60" selected>1-Hour Intervals</option>
             <option value="120">2-Hour Intervals</option>
@@ -524,7 +531,7 @@
           <div class="card-header">
             <div>
               <h3 class="card-title" id="todChartTitle">Incidents by Time of Day</h3>
-              <p class="card-subtitle" id="todChartSub">Based on Column E request timestamp</p>
+              <p class="card-subtitle" id="todChartSub">Based on request timestamp</p>
             </div>
           </div>
           <div class="chart-wrap">
@@ -536,7 +543,7 @@
           <div class="card-header">
             <div>
               <h3 class="card-title" id="dowChartTitle">Incidents by Day of the Week</h3>
-              <p class="card-subtitle" id="dowChartSub">Distribution across Sunday – Saturday</p>
+              <p class="card-subtitle" id="dowChartSub">Distribution across Monday – Friday</p>
             </div>
           </div>
           <div class="chart-wrap">
@@ -550,22 +557,22 @@
       <div class="card-header">
         <div>
           <h3 class="card-title" id="scopeTableTitle">Matching Records</h3>
-          <p class="card-subtitle">All records matching the selected timespan and scope filter</p>
+          <p class="card-subtitle">All records matching the selected timespan and scope filter (click truncated notes to expand)</p>
         </div>
       </div>
       <div class="table-container">
         <table>
           <thead>
             <tr>
-              <th>Student (Col A &amp; B)</th>
-              <th>Class (Col C)</th>
-              <th>Grade (Col D)</th>
-              <th>Request Time (Col E)</th>
-              <th>Location (Col F)</th>
-              <th>Responder (Col G)</th>
-              <th>Response Time (Col H)</th>
+              <th>Student</th>
+              <th>Class</th>
+              <th>Grade</th>
+              <th>Request Time</th>
+              <th>Location</th>
+              <th>Responder</th>
+              <th>Response Time</th>
               <th>Elapsed</th>
-              <th>Notes (Col I)</th>
+              <th>Notes</th>
             </tr>
           </thead>
           <tbody id="scopeRecordsBody"></tbody>
@@ -575,13 +582,13 @@
   </section>
 
   <!-- =========================================================
-       TAB 2: ELAPSED TIME ANALYSIS (COL E -> COL H)
+       TAB 2: ELAPSED TIME ANALYSIS
        ========================================================= -->
   <section id="tab-elapsed" class="tab-panel">
     <div class="card">
       <div class="card-header">
         <div>
-          <h2 class="card-title">Elapsed Response Time (Column E Timestamp &rarr; Column H Timestamp)</h2>
+          <h2 class="card-title">Elapsed Response Time (Request Timestamp &rarr; Response Timestamp)</h2>
           <p class="card-subtitle">Analyze response times overall or broken down by Responder, Teacher/Class, Grade, or Student.</p>
         </div>
       </div>
@@ -591,10 +598,10 @@
           <label for="elapsedGroupBy">Group Comparison By:</label>
           <select id="elapsedGroupBy">
             <option value="overall">General / Overall Summary</option>
-            <option value="responder" selected>By Responder (Col G)</option>
-            <option value="class">By Teacher / Class (Col C)</option>
-            <option value="grade">By Grade (Col D)</option>
-            <option value="student">By Student (Col A &amp; B)</option>
+            <option value="responder" selected>By Responder</option>
+            <option value="class">By Teacher / Class</option>
+            <option value="grade">By Grade</option>
+            <option value="student">By Student</option>
           </select>
         </div>
 
@@ -612,7 +619,7 @@
         <div class="card-header">
           <div>
             <h3 class="card-title" id="elapsedChartTitle">Average vs. Median Elapsed Time (Minutes)</h3>
-            <p class="card-subtitle">Calculated only from resolved records with valid Column E and Column H timestamps</p>
+            <p class="card-subtitle">Calculated from resolved records with valid request and response timestamps</p>
           </div>
         </div>
         <div class="chart-wrap">
@@ -637,7 +644,7 @@
       <div class="card-header">
         <div>
           <h2 class="card-title">Proportional Pie Chart Breakdown</h2>
-          <p class="card-subtitle">Percentage distribution across Grade, Teacher, Student, Day of Week, Portion of Day, or Responder.</p>
+          <p class="card-subtitle">Percentage distribution arranged from largest to smallest slice across Grade, Teacher, Student, Day of Week, Portion of Day, or Responder.</p>
         </div>
       </div>
 
@@ -650,14 +657,6 @@
           <button class="chip" data-dim="portionOfDay">By Portion of Day</button>
           <button class="chip" data-dim="responder">By Responder</button>
         </div>
-
-        <div class="filter-group" style="margin-left: auto;">
-          <label for="pieChartStyle">Style:</label>
-          <select id="pieChartStyle">
-            <option value="pie" selected>Pie Chart</option>
-            <option value="doughnut">Doughnut Chart</option>
-          </select>
-        </div>
       </div>
 
       <!-- Day Division Customizer (Shown prominently for Portion of Day) -->
@@ -665,7 +664,7 @@
         <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
           <div>
             <strong style="font-size: 13px;">Day Division Settings (Control How Finely Days Are Divided)</strong>
-            <div style="font-size: 12px; color: var(--text-muted);">Choose equal-length intervals (e.g., 15m, 30m, 1h, 2h, 4h) or create custom named time blocks.</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Choose equal-length intervals (e.g., 5m, 10m, 15m, 30m, 1h, 2h) or create custom named time blocks.</div>
           </div>
           <div class="filter-group">
             <label for="divisionMode">Mode:</label>
@@ -680,6 +679,8 @@
           <div class="filter-group">
             <label for="intervalMinutes">Slice Size:</label>
             <select id="intervalMinutes">
+              <option value="5">Every 5 Minutes (288 slices/day)</option>
+              <option value="10">Every 10 Minutes (144 slices/day)</option>
               <option value="15">Every 15 Minutes (96 slices/day)</option>
               <option value="30">Every 30 Minutes (48 slices/day)</option>
               <option value="60" selected>Every 1 Hour (24 slices/day)</option>
@@ -693,7 +694,7 @@
           </div>
           <div class="filter-group" id="customMinutesGroup" style="display: none;">
             <label for="customMinutesInput">Minutes per Slice:</label>
-            <input type="number" id="customMinutesInput" min="5" max="720" value="45" style="width: 85px;" />
+            <input type="number" id="customMinutesInput" min="1" max="720" value="45" style="width: 85px;" />
           </div>
           <div class="filter-group">
             <label>
@@ -745,7 +746,7 @@
       <div class="card-header">
         <div>
           <h2 class="card-title">Raw Record Data — Click Any Column Header to Sort</h2>
-          <p class="card-subtitle">Click a header to sort low-to-high; click again to toggle high-to-low.</p>
+          <p class="card-subtitle">Click a header to sort low-to-high; click again to toggle high-to-low. Click truncated notes to expand.</p>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
           <input type="text" id="rawSearchInput" placeholder="Search name, class, responder, notes..." style="width: 260px;" />
@@ -757,16 +758,16 @@
         <table>
           <thead>
             <tr>
-              <th class="sortable" data-sort="firstName">First Name (Col A) <span class="sort-ind"></span></th>
-              <th class="sortable" data-sort="lastName">Last Name (Col B) <span class="sort-ind"></span></th>
-              <th class="sortable" data-sort="className">Class (Col C) <span class="sort-ind"></span></th>
-              <th class="sortable" data-sort="grade">Grade (Col D) <span class="sort-ind"></span></th>
-              <th class="sortable" data-sort="timestamp">Request Timestamp (Col E) <span class="sort-ind">▼</span></th>
-              <th class="sortable" data-sort="location">Location (Col F) <span class="sort-ind"></span></th>
-              <th class="sortable" data-sort="responder">Responder (Col G) <span class="sort-ind"></span></th>
-              <th class="sortable" data-sort="responseTimestamp">Response Timestamp (Col H) <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="firstName">First Name <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="lastName">Last Name <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="className">Class <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="grade">Grade <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="timestamp">Request Timestamp <span class="sort-ind">▼</span></th>
+              <th class="sortable" data-sort="location">Location <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="responder">Responder <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="responseTimestamp">Response Timestamp <span class="sort-ind"></span></th>
               <th class="sortable" data-sort="elapsedMinutes">Elapsed (min) <span class="sort-ind"></span></th>
-              <th class="sortable" data-sort="notes">Notes (Col I) <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="notes">Notes <span class="sort-ind"></span></th>
             </tr>
           </thead>
           <tbody id="rawTableBody"></tbody>
@@ -776,7 +777,7 @@
   </section>
 
   <!-- =========================================================
-       TAB 5: MANAGE RESPONDERS ('responders' TAB)
+       TAB 5: MANAGE RESPONDERS
        ========================================================= -->
   <section id="tab-responders" class="tab-panel">
     <div class="two-col">
@@ -784,21 +785,21 @@
         <div class="card-header">
           <div>
             <h2 class="card-title">Add New Responder</h2>
-            <p class="card-subtitle">Appends a new row to the <code>responders</code> tab (Name in Column A, Email in Column B).</p>
+            <p class="card-subtitle">Adds a new responder entry to the responders list.</p>
           </div>
         </div>
 
         <form id="addResponderForm" style="display: flex; flex-direction: column; gap: 12px;">
           <div>
-            <label for="newResponderName" style="display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Responder Name (Column A)</label>
+            <label for="newResponderName" style="display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Responder Name</label>
             <input type="text" id="newResponderName" placeholder="e.g., Smith" required style="width: 100%;" />
           </div>
           <div>
-            <label for="newResponderEmail" style="display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Responder Email (Column B)</label>
+            <label for="newResponderEmail" style="display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Responder Email</label>
             <input type="email" id="newResponderEmail" placeholder="e.g., jsmith@crec.org" required style="width: 100%;" />
           </div>
           <div>
-            <button type="submit" class="primary" id="addResponderSubmitBtn">Add Responder to Sheet</button>
+            <button type="submit" class="primary" id="addResponderSubmitBtn">Add Responder</button>
           </div>
         </form>
       </div>
@@ -806,8 +807,8 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Current Responders (<code>responders</code> Tab)</h2>
-            <p class="card-subtitle">Existing responders currently listed in your spreadsheet. Click Delete to remove a row.</p>
+            <h2 class="card-title">Current Responders</h2>
+            <p class="card-subtitle">Existing responders currently active in the system. Click Delete to remove a responder.</p>
           </div>
         </div>
 
@@ -815,9 +816,9 @@
           <table>
             <thead>
               <tr>
-                <th>Name (Col A)</th>
-                <th>Email (Col B)</th>
-                <th>Sheet Count (Col C)</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Response Count</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -835,8 +836,7 @@
   // =========================================================================
   // CONFIGURATION: Deployed Google Apps Script Web App URL
   // =========================================================================
-  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJi5fstpdPXgRx45hU2MGV7OoZ-SAqdWKpVS4rp6V4_dkVRvH6ua8bC9tSM3ZH3PTY/exec';
-  const STORAGE_KEY_URL = 'level2_apps_script_url_v1';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJi5fstpdPXgRx45hU2MGV7OoZ-SAqdWKpVS4rp6V4_dkVRvH6ua8bC9tSM3ZH3PTY/exec';
 
   // Fallback preview dataset (used only if network fetch fails)
   const FALLBACK_RECORDS = [
@@ -872,7 +872,6 @@
   // APPLICATION STATE
   // =========================================================================
   const state = {
-    scriptUrl: localStorage.getItem(STORAGE_KEY_URL) || DEFAULT_SCRIPT_URL,
     isLive: false,
     rawRecords: [],
     responderDetails: [],
@@ -885,7 +884,6 @@
     elapsedGroupBy: 'responder',
     elapsedEntity: '__ALL__',
     pieDimension: 'grade',
-    pieStyle: 'pie',
     divisionMode: 'equal',
     intervalMinutes: 60,
     customMinutes: 45,
@@ -915,7 +913,14 @@
     '#0284c7', '#9333ea', '#65a30d', '#e11d48', '#475569'
   ];
 
-  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  // Monday through Friday only (JS Date.getDay(): 1=Mon ... 5=Fri)
+  const WEEKDAYS = [
+    { name: 'Monday', jsDay: 1 },
+    { name: 'Tuesday', jsDay: 2 },
+    { name: 'Wednesday', jsDay: 3 },
+    { name: 'Thursday', jsDay: 4 },
+    { name: 'Friday', jsDay: 5 }
+  ];
 
   // =========================================================================
   // UTILITIES: DATE PARSING, ESCAPING, FORMATTING
@@ -977,7 +982,6 @@
 
   function getMostRecentAugustFirst() {
     const now = new Date();
-    // Month is 0-indexed: August is 7
     const year = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
     return `${year}-08-01`;
   }
@@ -1059,6 +1063,21 @@
     });
   }
 
+  // Mark truncated note cells so long notes show '...' and expand/collapse on click
+  function enhanceTruncatedNotes() {
+    document.querySelectorAll('.notes-cell').forEach(cell => {
+      const rawText = cell.textContent || '';
+      if (rawText === '—' || !rawText.trim()) return;
+      if (cell.scrollWidth > cell.clientWidth || rawText.includes('\n')) {
+        cell.classList.add('is-truncated');
+        cell.title = 'Click to expand or collapse note';
+      } else {
+        cell.classList.remove('is-truncated');
+        cell.removeAttribute('title');
+      }
+    });
+  }
+
   // =========================================================================
   // DATA LOADING & APPS SCRIPT COMMUNICATION
   // =========================================================================
@@ -1066,62 +1085,37 @@
     const statusEl = document.getElementById('connectionStatus');
     const labelEl = document.getElementById('connectionLabel');
 
-    if (!state.scriptUrl) {
-      state.isLive = false;
-      state.rawRecords = normalizeRecords(FALLBACK_RECORDS);
-      state.responderDetails = [...FALLBACK_RESPONDERS];
-      statusEl.className = 'status-pill demo';
-      labelEl.textContent = 'Demo Preview Data';
-      renderAll();
-      return;
-    }
-
-    labelEl.textContent = 'Loading from Google Sheet...';
+    labelEl.textContent = 'Syncing records...';
     try {
-      const response = await fetch(state.scriptUrl, { method: 'GET' });
+      const response = await fetch(SCRIPT_URL, { method: 'GET' });
       const json = await response.json();
       if (json.status !== 'success') {
-        throw new Error(json.message || 'Failed to load data from Apps Script.');
+        throw new Error(json.message || 'Failed to load data.');
       }
 
       state.isLive = true;
       state.rawRecords = normalizeRecords(json.records || []);
       state.responderDetails = json.responderDetails || [];
       statusEl.className = 'status-pill live';
-      labelEl.textContent = `Live Sheet (${state.rawRecords.length} total rows)`;
+      labelEl.textContent = `Live (${state.rawRecords.length} total records)`;
       renderAll();
-      showToast('Synced latest records from Google Sheet.');
+      showToast('Synced latest records.');
     } catch (err) {
       console.error(err);
       state.isLive = false;
       statusEl.className = 'status-pill demo';
-      labelEl.textContent = 'Connection Error (Showing Preview)';
+      labelEl.textContent = 'Offline Preview Data';
       if (!state.rawRecords.length) {
         state.rawRecords = normalizeRecords(FALLBACK_RECORDS);
         state.responderDetails = [...FALLBACK_RESPONDERS];
       }
       renderAll();
-      showToast('Error loading Web App URL: ' + err.message);
+      showToast('Could not reach live feed: ' + err.message);
     }
   }
 
   async function postAction(payload) {
-    if (!state.scriptUrl) {
-      if (payload.action === 'addResponder') {
-        state.responderDetails.push({ name: payload.name, email: payload.email, responses: 0, total: 0 });
-        renderRespondersManager();
-        showToast('Added responder in Demo Mode.');
-      } else if (payload.action === 'deleteResponder') {
-        state.responderDetails = state.responderDetails.filter(
-          r => !(r.name === payload.name && r.email === payload.email)
-        );
-        renderRespondersManager();
-        showToast('Deleted responder in Demo Mode.');
-      }
-      return;
-    }
-
-    const res = await fetch(state.scriptUrl, {
+    const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
@@ -1162,7 +1156,7 @@
   }
 
   // =========================================================================
-  // TIME-OF-DAY BUCKETING LOGIC (SUPPORTS EQUAL INTERVALS & CUSTOM BLOCKS)
+  // TIME-OF-DAY BUCKETING LOGIC (SUPPORTS 5m, 10m, 15m+ & CUSTOM BLOCKS)
   // =========================================================================
   function minutesToHHMM(totalMins) {
     const h = Math.floor(totalMins / 60);
@@ -1175,7 +1169,7 @@
     return (h || 0) * 60 + (m || 0);
   }
 
-  function bucketRecordsByTimeOfDay(records, mode, intervalMins, hideEmpty) {
+  function bucketRecordsByTimeOfDay(records, mode, intervalMins, hideEmpty, trimToActiveWindow = false) {
     if (mode === 'customBlocks') {
       const counts = state.customBlocks.map(b => ({ label: b.label, count: 0 }));
       let unassigned = 0;
@@ -1200,8 +1194,7 @@
       return hideEmpty ? counts.filter(c => c.count > 0) : counts;
     }
 
-    // Equal interval buckets across 0..1440 minutes
-    const step = Math.max(5, Math.min(720, Number(intervalMins) || 60));
+    const step = Math.max(1, Math.min(720, Number(intervalMins) || 60));
     const bucketCount = Math.ceil(1440 / step);
     const buckets = [];
     for (let i = 0; i < bucketCount; i++) {
@@ -1220,7 +1213,27 @@
       buckets[idx].count++;
     });
 
-    return hideEmpty ? buckets.filter(b => b.count > 0) : buckets;
+    if (hideEmpty) {
+      return buckets.filter(b => b.count > 0);
+    }
+
+    // For fine intervals (5, 10, 15, 30 min) on bar charts, trim dead overnight hours
+    if (trimToActiveWindow && step < 60) {
+      const firstActive = buckets.findIndex(b => b.count > 0);
+      let lastActive = -1;
+      for (let i = buckets.length - 1; i >= 0; i--) {
+        if (buckets[i].count > 0) { lastActive = i; break; }
+      }
+      if (firstActive !== -1 && lastActive !== -1) {
+        return buckets.slice(firstActive, lastActive + 1);
+      }
+      // Default school window 07:30 to 16:00 if no records exist
+      const startIdx = Math.floor((7 * 60 + 30) / step);
+      const endIdx = Math.min(bucketCount - 1, Math.ceil((16 * 60) / step));
+      return buckets.slice(startIdx, endIdx + 1);
+    }
+
+    return buckets;
   }
 
   // =========================================================================
@@ -1239,7 +1252,7 @@
 
     let values = [];
     if (state.scopeType === 'student') {
-      label.textContent = 'Student (Col A & B):';
+      label.textContent = 'Student:';
       values = [...new Set(records.map(r => r.fullName))].sort((a, b) => a.localeCompare(b));
     } else if (state.scopeType === 'class') {
       label.textContent = 'Class / Teacher:';
@@ -1275,11 +1288,14 @@
     const openCount = scoped.filter(r => !r.responder || r.responder.toLowerCase() === 'na').length;
     const stats = calcStats(resolved.map(r => r.elapsedMinutes));
 
-    // Peak day
-    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
-    scoped.forEach(r => { if (r.reqDate) dayCounts[r.reqDate.getDay()]++; });
-    const maxDayVal = Math.max(...dayCounts);
-    const peakDay = maxDayVal > 0 ? DAY_NAMES[dayCounts.indexOf(maxDayVal)] : '—';
+    // Weekday counts (Monday through Friday only)
+    const weekdayCounts = WEEKDAYS.map(wd => ({
+      name: wd.name,
+      count: scoped.filter(r => r.reqDate && r.reqDate.getDay() === wd.jsDay).length
+    }));
+    const maxWeekdayVal = Math.max(...weekdayCounts.map(w => w.count));
+    const peakDayObj = weekdayCounts.find(w => w.count === maxWeekdayVal && maxWeekdayVal > 0);
+    const peakDay = peakDayObj ? peakDayObj.name : '—';
 
     document.getElementById('overviewKpis').innerHTML = `
       <div class="kpi-card">
@@ -1290,17 +1306,17 @@
       <div class="kpi-card">
         <div class="kpi-label">Resolved / Open</div>
         <div class="kpi-value">${scoped.length - openCount} <span style="font-size:15px;color:var(--text-muted);font-weight:600;">/ ${openCount} open</span></div>
-        <div class="kpi-sub">Based on Col G &amp; H</div>
+        <div class="kpi-sub">Based on responder status</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Avg Elapsed Time</div>
         <div class="kpi-value" style="font-size:21px;">${formatMinutes(stats.avg)}</div>
-        <div class="kpi-sub">Col E &rarr; Col H (${stats.count} timed)</div>
+        <div class="kpi-sub">Request to response (${stats.count} timed)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Median Elapsed Time</div>
         <div class="kpi-value" style="font-size:21px;">${formatMinutes(stats.median)}</div>
-        <div class="kpi-sub">Peak Day: ${peakDay}</div>
+        <div class="kpi-sub">Peak Weekday: ${peakDay}</div>
       </div>
     `;
 
@@ -1308,9 +1324,9 @@
     let todBuckets;
     if (state.overviewTimeBucket === 'custom') {
       const activeStep = state.intervalMinutes === 'customMin' ? state.customMinutes : Number(state.intervalMinutes);
-      todBuckets = bucketRecordsByTimeOfDay(scoped, state.divisionMode, activeStep, false);
+      todBuckets = bucketRecordsByTimeOfDay(scoped, state.divisionMode, activeStep, false, true);
     } else {
-      todBuckets = bucketRecordsByTimeOfDay(scoped, 'equal', Number(state.overviewTimeBucket), false);
+      todBuckets = bucketRecordsByTimeOfDay(scoped, 'equal', Number(state.overviewTimeBucket), false, true);
     }
 
     document.getElementById('todChartTitle').textContent = `Time of Day — ${scopeDescriptor}`;
@@ -1323,7 +1339,7 @@
           label: 'Incidents',
           data: todBuckets.map(b => b.count),
           backgroundColor: '#2563eb',
-          borderRadius: 5
+          borderRadius: 4
         }]
       },
       options: {
@@ -1337,16 +1353,16 @@
       }
     });
 
-    // Day of Week Chart
+    // Day of Week Chart (Monday–Friday only)
     document.getElementById('dowChartTitle').textContent = `Day of Week — ${scopeDescriptor}`;
     if (charts.dow) charts.dow.destroy();
     charts.dow = new Chart(document.getElementById('dowChart'), {
       type: 'bar',
       data: {
-        labels: DAY_NAMES,
+        labels: weekdayCounts.map(w => w.name),
         datasets: [{
           label: 'Incidents',
-          data: dayCounts,
+          data: weekdayCounts.map(w => w.count),
           backgroundColor: '#0891b2',
           borderRadius: 6
         }]
@@ -1380,10 +1396,12 @@
         <td class="notes-cell">${escapeHtml(r.notes || '—')}</td>
       </tr>
     `).join('');
+
+    requestAnimationFrame(enhanceTruncatedNotes);
   }
 
   // =========================================================================
-  // RENDER TAB 2: ELAPSED TIME ANALYSIS (COL E -> COL H)
+  // RENDER TAB 2: ELAPSED TIME ANALYSIS
   // =========================================================================
   function renderElapsed() {
     const timeFiltered = getTimespanFilteredRecords();
@@ -1412,7 +1430,6 @@
         keys.map(k => `<option value="${escapeHtml(k)}" ${k === state.elapsedEntity ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('');
     }
 
-    // Filter to specific entity if chosen
     const activeRecords = timedRecords.filter(r => {
       if (groupBy === 'overall' || state.elapsedEntity === '__ALL__') return true;
       if (groupBy === 'responder') return (r.responder || '(Unassigned)') === state.elapsedEntity;
@@ -1433,7 +1450,7 @@
       <div class="kpi-card">
         <div class="kpi-label">Average Elapsed Time</div>
         <div class="kpi-value" style="font-size:21px;">${formatMinutes(overallStats.avg)}</div>
-        <div class="kpi-sub">Mean Col E &rarr; Col H</div>
+        <div class="kpi-sub">Mean request to response</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Median Elapsed Time</div>
@@ -1534,8 +1551,8 @@
           <th>Class</th>
           <th>Grade</th>
           <th>Responder</th>
-          <th>Request (Col E)</th>
-          <th>Response (Col H)</th>
+          <th>Request Time</th>
+          <th>Response Time</th>
           <th>Elapsed Time</th>
         </tr>
       `;
@@ -1625,11 +1642,13 @@
 
     if (dim === 'portionOfDay') {
       const step = state.intervalMinutes === 'customMin' ? state.customMinutes : Number(state.intervalMinutes);
-      slices = bucketRecordsByTimeOfDay(records, state.divisionMode, step, state.hideEmptySlices);
+      slices = bucketRecordsByTimeOfDay(records, state.divisionMode, step, state.hideEmptySlices, false);
     } else if (dim === 'dayOfWeek') {
-      const counts = [0, 0, 0, 0, 0, 0, 0];
-      records.forEach(r => { if (r.reqDate) counts[r.reqDate.getDay()]++; });
-      slices = DAY_NAMES.map((name, idx) => ({ label: name, count: counts[idx] }));
+      // Monday through Friday only
+      slices = WEEKDAYS.map(wd => ({
+        label: wd.name,
+        count: records.filter(r => r.reqDate && r.reqDate.getDay() === wd.jsDay).length
+      }));
     } else {
       const map = new Map();
       records.forEach(r => {
@@ -1642,19 +1661,17 @@
       });
 
       slices = [...map.entries()].map(([label, count]) => ({ label, count }));
-      if (dim === 'grade') {
-        slices.sort((a, b) => compareGrades(a.label, b.label));
-      } else {
-        slices.sort((a, b) => b.count - a.count);
-      }
     }
+
+    // Arrange all pie chart slices by size (largest to smallest)
+    slices.sort((a, b) => (b.count - a.count) || a.label.localeCompare(b.label));
 
     const total = slices.reduce((acc, s) => acc + s.count, 0);
     const colors = slices.map((_, i) => CHART_PALETTE[i % CHART_PALETTE.length]);
 
     if (charts.pie) charts.pie.destroy();
     charts.pie = new Chart(document.getElementById('pieChartCanvas'), {
-      type: state.pieStyle,
+      type: 'pie',
       data: {
         labels: slices.map(s => s.label),
         datasets: [{
@@ -1776,6 +1793,8 @@
         <td class="notes-cell">${escapeHtml(r.notes || '')}</td>
       </tr>
     `).join('');
+
+    requestAnimationFrame(enhanceTruncatedNotes);
   }
 
   function exportFilteredCsv() {
@@ -1806,7 +1825,7 @@
   function renderRespondersManager() {
     const tbody = document.getElementById('respondersManageBody');
     if (!state.responderDetails.length) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:18px;">No responders found in the responders tab.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:18px;">No responders found.</td></tr>';
       return;
     }
 
@@ -1826,7 +1845,7 @@
         const idx = Number(e.target.dataset.delRespIdx);
         const target = state.responderDetails[idx];
         if (!target) return;
-        if (!confirm(`Remove "${target.name}" (${target.email}) from the responders tab?`)) return;
+        if (!confirm(`Remove "${target.name}" (${target.email}) from the responders list?`)) return;
 
         btn.disabled = true;
         btn.textContent = 'Deleting...';
@@ -1837,7 +1856,7 @@
             email: target.email
           });
           renderRespondersManager();
-          showToast(`Removed ${target.name} from responders tab.`);
+          showToast(`Removed ${target.name} from responders.`);
         } catch (err) {
           showToast('Delete failed: ' + err.message);
           btn.disabled = false;
@@ -1895,18 +1914,17 @@
   }
 
   function init() {
-    document.getElementById('scriptUrlInput').value = state.scriptUrl;
     applyTimespanPreset('schoolYear');
 
-    // Connection bar events
-    document.getElementById('saveUrlBtn').addEventListener('click', () => {
-      const url = document.getElementById('scriptUrlInput').value.trim();
-      state.scriptUrl = url || DEFAULT_SCRIPT_URL;
-      document.getElementById('scriptUrlInput').value = state.scriptUrl;
-      localStorage.setItem(STORAGE_KEY_URL, state.scriptUrl);
-      loadData();
-    });
     document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+    // Click-to-expand / click-to-collapse long notes
+    document.addEventListener('click', e => {
+      const noteCell = e.target.closest('.notes-cell');
+      if (noteCell && (noteCell.classList.contains('is-truncated') || noteCell.classList.contains('expanded'))) {
+        noteCell.classList.toggle('expanded');
+      }
+    });
 
     // Timespan events
     document.getElementById('startDate').addEventListener('change', e => {
@@ -1929,6 +1947,7 @@
         state.activeTab = tab.dataset.tab;
         document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t === tab));
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${state.activeTab}`));
+        requestAnimationFrame(enhanceTruncatedNotes);
       });
     });
 
@@ -1966,10 +1985,6 @@
         renderPie();
       });
     });
-    document.getElementById('pieChartStyle').addEventListener('change', e => {
-      state.pieStyle = e.target.value;
-      renderPie();
-    });
     document.getElementById('divisionMode').addEventListener('change', e => {
       state.divisionMode = e.target.value;
       document.getElementById('equalDivisionControls').style.display = state.divisionMode === 'equal' ? 'flex' : 'none';
@@ -1983,7 +1998,7 @@
       if (state.overviewTimeBucket === 'custom') renderOverview();
     });
     document.getElementById('customMinutesInput').addEventListener('change', e => {
-      state.customMinutes = Math.max(5, Math.min(720, Number(e.target.value) || 45));
+      state.customMinutes = Math.max(1, Math.min(720, Number(e.target.value) || 45));
       renderPie();
       if (state.overviewTimeBucket === 'custom') renderOverview();
     });
@@ -2046,18 +2061,19 @@
         nameInp.value = '';
         emailInp.value = '';
         renderRespondersManager();
-        showToast(`Added ${name} (${email}) to the responders tab.`);
+        showToast(`Added ${name} (${email}) to responders.`);
       } catch (err) {
         showToast('Failed to add responder: ' + err.message);
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Add Responder to Sheet';
+        submitBtn.textContent = 'Add Responder';
       }
     });
 
     loadData();
   }
 
+  window.addEventListener('resize', enhanceTruncatedNotes);
   window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>

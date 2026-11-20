@@ -440,9 +440,9 @@
     <div class="connection-bar">
       <span id="connectionStatus" class="status-pill demo">
         <span class="status-dot"></span>
-        <span id="connectionLabel">Demo Preview Data</span>
+        <span id="connectionLabel">Connecting...</span>
       </span>
-      <input type="text" id="scriptUrlInput" placeholder="Paste Google Apps Script Web App URL..." style="width: 290px;" />
+      <input type="text" id="scriptUrlInput" placeholder="Google Apps Script Web App URL..." style="width: 290px;" />
       <button class="primary" id="saveUrlBtn">Connect &amp; Load</button>
       <button id="refreshBtn" title="Reload latest data from Google Sheet">Refresh</button>
     </div>
@@ -833,12 +833,12 @@
 
 <script>
   // =========================================================================
-  // CONFIGURATION: Paste your deployed Google Apps Script Web App URL below
+  // CONFIGURATION: Deployed Google Apps Script Web App URL
   // =========================================================================
-  const DEFAULT_SCRIPT_URL = '';
+  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJi5fstpdPXgRx45hU2MGV7OoZ-SAqdWKpVS4rp6V4_dkVRvH6ua8bC9tSM3ZH3PTY/exec';
   const STORAGE_KEY_URL = 'level2_apps_script_url_v1';
 
-  // Fallback preview dataset (matches your spreadsheet structure when no URL is connected yet)
+  // Fallback preview dataset (used only if network fetch fails)
   const FALLBACK_RECORDS = [
     { firstName: 'Akeem', lastName: 'Morris', className: 'Nunn', grade: '4', timestamp: '2026-11-19 11:15:55', location: "Nunn's Classroom", responder: 'Malanson', responseTimestamp: '2026-11-19 11:48:02', notes: '' },
     { firstName: 'Jomar', lastName: 'Garcia', className: 'Feuerberg', grade: '3', timestamp: '2026-11-19 10:55:08', location: "Feuerberg's Classroom", responder: 'Hills', responseTimestamp: '2026-11-19 11:04:03', notes: '' },
@@ -1107,17 +1107,16 @@
 
   async function postAction(payload) {
     if (!state.scriptUrl) {
-      // Simulate locally in Demo Mode so user can still test UI
       if (payload.action === 'addResponder') {
         state.responderDetails.push({ name: payload.name, email: payload.email, responses: 0, total: 0 });
         renderRespondersManager();
-        showToast('Added responder in Demo Mode. Connect Web App URL to write to Google Sheets.');
+        showToast('Added responder in Demo Mode.');
       } else if (payload.action === 'deleteResponder') {
         state.responderDetails = state.responderDetails.filter(
           r => !(r.name === payload.name && r.email === payload.email)
         );
         renderRespondersManager();
-        showToast('Deleted responder in Demo Mode. Connect Web App URL to write to Google Sheets.');
+        showToast('Deleted responder in Demo Mode.');
       }
       return;
     }
@@ -1476,7 +1475,6 @@
     // Chart
     if (charts.elapsed) charts.elapsed.destroy();
     if (state.elapsedEntity !== '__ALL__' && groupBy !== 'overall') {
-      // Show individual incident timeline for that specific responder/teacher/grade/student
       const sortedInc = [...activeRecords].sort((a, b) => (a.reqDate || 0) - (b.reqDate || 0));
       document.getElementById('elapsedChartTitle').textContent = `Individual Response Times for ${state.elapsedEntity}`;
       charts.elapsed = new Chart(document.getElementById('elapsedChart'), {
@@ -1525,7 +1523,7 @@
       });
     }
 
-    // Table: If specific entity chosen, show each individual incident; otherwise show grouped stats
+    // Table
     const thead = document.getElementById('elapsedTableHead');
     const tbody = document.getElementById('elapsedTableBody');
 
@@ -1623,7 +1621,7 @@
     const builder = document.getElementById('dayDivisionBuilder');
     builder.style.display = dim === 'portionOfDay' ? 'block' : 'none';
 
-    let slices = []; // { label, count }
+    let slices = [];
 
     if (dim === 'portionOfDay') {
       const step = state.intervalMinutes === 'customMin' ? state.customMinutes : Number(state.intervalMinutes);
@@ -1749,7 +1747,6 @@
       return String(a[col] || '').localeCompare(String(b[col] || '')) * dir;
     });
 
-    // Update header sort indicators
     document.querySelectorAll('#tab-raw th.sortable').forEach(th => {
       const ind = th.querySelector('.sort-ind');
       if (th.dataset.sort === col) {
@@ -1898,15 +1895,15 @@
   }
 
   function init() {
-    // Initialize default timespan: Most recent August 1st to Present
     document.getElementById('scriptUrlInput').value = state.scriptUrl;
     applyTimespanPreset('schoolYear');
 
     // Connection bar events
     document.getElementById('saveUrlBtn').addEventListener('click', () => {
       const url = document.getElementById('scriptUrlInput').value.trim();
-      state.scriptUrl = url;
-      localStorage.setItem(STORAGE_KEY_URL, url);
+      state.scriptUrl = url || DEFAULT_SCRIPT_URL;
+      document.getElementById('scriptUrlInput').value = state.scriptUrl;
+      localStorage.setItem(STORAGE_KEY_URL, state.scriptUrl);
       loadData();
     });
     document.getElementById('refreshBtn').addEventListener('click', loadData);

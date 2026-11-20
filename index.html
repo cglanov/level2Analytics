@@ -644,7 +644,7 @@
       <div class="card-header">
         <div>
           <h2 class="card-title">Proportional Pie Chart Breakdown</h2>
-          <p class="card-subtitle">Percentage distribution arranged from largest to smallest slice across Grade, Teacher, Student, Day of Week, Portion of Day, or Responder.</p>
+          <p class="card-subtitle">Percentage distribution arranged from largest to smallest slice across Grade, Teacher, Student, Location, Day of Week, Portion of Day, or Responder.</p>
         </div>
       </div>
 
@@ -653,6 +653,7 @@
           <button class="chip active" data-dim="grade">By Grade</button>
           <button class="chip" data-dim="class">By Teacher / Class</button>
           <button class="chip" data-dim="student">By Student</button>
+          <button class="chip" data-dim="location">By Location</button>
           <button class="chip" data-dim="dayOfWeek">By Day of Week</button>
           <button class="chip" data-dim="portionOfDay">By Portion of Day</button>
           <button class="chip" data-dim="responder">By Responder</button>
@@ -749,7 +750,7 @@
           <p class="card-subtitle">Click a header to sort low-to-high; click again to toggle high-to-low. Click truncated notes to expand.</p>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-          <input type="text" id="rawSearchInput" placeholder="Search name, class, responder, notes..." style="width: 260px;" />
+          <input type="text" id="rawSearchInput" placeholder="Search name, class, location, responder, notes..." style="width: 280px;" />
           <button id="exportCsvBtn">Export Filtered CSV</button>
         </div>
       </div>
@@ -1227,7 +1228,6 @@
       if (firstActive !== -1 && lastActive !== -1) {
         return buckets.slice(firstActive, lastActive + 1);
       }
-      // Default school window 07:30 to 16:00 if no records exist
       const startIdx = Math.floor((7 * 60 + 30) / step);
       const endIdx = Math.min(bucketCount - 1, Math.ceil((16 * 60) / step));
       return buckets.slice(startIdx, endIdx + 1);
@@ -1656,6 +1656,7 @@
         if (dim === 'grade') key = r.grade || '(Unknown)';
         else if (dim === 'class') key = r.className || '(Unassigned)';
         else if (dim === 'student') key = r.fullName || '(Unknown)';
+        else if (dim === 'location') key = r.location || '(Unknown)';
         else if (dim === 'responder') key = r.responder || '(Open / Unassigned)';
         map.set(key, (map.get(key) || 0) + 1);
       });
